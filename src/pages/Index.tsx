@@ -82,6 +82,81 @@ const DataAnalysisDashboard: React.FC = () => {
     return 'categorical';
   }, []);
 
+  // Chart generation
+  const generateAutomaticCharts = useCallback((data: DataRow[], cols: Column[]) => {
+    try {
+      const newCharts: Chart[] = [];
+
+      cols.forEach(column => {
+        if (column.type === 'numeric') {
+          // Generate histogram for numeric columns
+          const values = data.map(row => parseFloat(row[column.name])).filter(v => !isNaN(v));
+          
+          if (values.length > 0) {
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            
+            // Prevent division by zero
+            if (min !== max) {
+              const bins = 10;
+              const binSize = (max - min) / bins;
+              
+              const histogramData = Array.from({ length: bins }, (_, i) => {
+                const binStart = min + i * binSize;
+                const binEnd = binStart + binSize;
+                const count = values.filter(v => v >= binStart && (i === bins - 1 ? v <= binEnd : v < binEnd)).length;
+                return {
+                  range: `${binStart.toFixed(1)}-${binEnd.toFixed(1)}`,
+                  count,
+                  value: binStart + binSize / 2
+                };
+              });
+
+              newCharts.push({
+                id: `hist-${column.name}`,
+                type: 'bar',
+                title: `Distribution of ${column.name}`,
+                xAxis: 'range',
+                yAxis: 'count',
+                data: histogramData
+              });
+            }
+          }
+        } else if (column.type === 'categorical' && column.uniqueCount <= 20) {
+          // Generate bar chart for categorical columns
+          const valueCounts = data.reduce((acc, row) => {
+            const value = row[column.name];
+            if (value !== null && value !== undefined && value !== '') {
+              acc[value] = (acc[value] || 0) + 1;
+            }
+            return acc;
+          }, {} as Record<string, number>);
+
+          const barData = Object.entries(valueCounts)
+            .map(([key, value]) => ({ category: key, count: value }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 20); // Limit to top 20 categories
+
+          if (barData.length > 0) {
+            newCharts.push({
+              id: `bar-${column.name}`,
+              type: 'bar',
+              title: `Frequency of ${column.name}`,
+              xAxis: 'category',
+              yAxis: 'count',
+              data: barData
+            });
+          }
+        }
+      });
+
+      setCharts(newCharts);
+    } catch (error) {
+      console.error('Error generating charts:', error);
+      setCharts([]);
+    }
+  }, []);
+
   const processFile = useCallback((file: File) => {
     setIsProcessing(true);
     setFileName(file.name);
@@ -129,110 +204,79 @@ const DataAnalysisDashboard: React.FC = () => {
         });
       }
     });
-  }, [detectColumnType, toast]);
+  }, [detectColumnType, generateAutomaticCharts, toast]);
 
   // Data cleaning functions
   const applyDataCleaning = useCallback(() => {
     setIsProcessing(true);
-    let processedData = [...rawData];
+    
+    try {
+      let processedData = [...rawData];
 
-    // Remove duplicates
-    const uniqueData = processedData.filter((row, index, self) => 
-      index === self.findIndex(r => JSON.stringify(r) === JSON.stringify(row))
-    );
+      // Remove duplicates
+      let uniqueData = processedData.filter((row, index, self) => 
+        index === self.findIndex(r => JSON.stringify(r) === JSON.stringify(row))
+      );
 
-    // Handle missing values for each column
-    columns.forEach(column => {
-      if (column.strategy === 'remove') {
-        uniqueData.filter(row => row[column.name] !== null && row[column.name] !== undefined && row[column.name] !== '');
-      } else if (column.strategy === 'mean' && column.type === 'numeric') {
-        const values = uniqueData.map(row => parseFloat(row[column.name])).filter(v => !isNaN(v));
-        const mean = values.reduce((a, b) => a + b, 0) / values.length;
-        uniqueData.forEach(row => {
-          if (row[column.name] === null || row[column.name] === undefined || row[column.name] === '') {
-            row[column.name] = mean.toFixed(2);
+      // Handle missing values for each column
+      columns.forEach(column => {
+        if (column.strategy === 'remove') {
+          // Fixed: assign filtered result back to uniqueData
+          uniqueData = uniqueData.filter(row => 
+            row[column.name] !== null && 
+            row[column.name] !== undefined && 
+            row[column.name] !== ''
+          );
+        } else if (column.strategy === 'mean' && column.type === 'numeric') {
+          const values = uniqueData.map(row => parseFloat(row[column.name])).filter(v => !isNaN(v));
+          if (values.length > 0) {
+            const mean = values.reduce((a, b) => a + b, 0) / values.length;
+            uniqueData.forEach(row => {
+              if (row[column.name] === null || row[column.name] === undefined || row[column.name] === '') {
+                row[column.name] = mean.toFixed(2);
+              }
+            });
           }
-        });
-      } else if (column.strategy === 'mode') {
-        const values = uniqueData.map(row => row[column.name]).filter(v => v !== null && v !== undefined && v !== '');
-        const mode = values.sort((a, b) =>
-          values.filter(v => v === a).length - values.filter(v => v === b).length
-        ).pop();
-        uniqueData.forEach(row => {
-          if (row[column.name] === null || row[column.name] === undefined || row[column.name] === '') {
-            row[column.name] = mode;
+        } else if (column.strategy === 'mode') {
+          const values = uniqueData.map(row => row[column.name]).filter(v => v !== null && v !== undefined && v !== '');
+          if (values.length > 0) {
+            // Fixed: proper mode calculation
+            const frequency = values.reduce((acc, val) => {
+              acc[val] = (acc[val] || 0) + 1;
+              return acc;
+            }, {} as Record<string, number>);
+            
+            const mode = Object.keys(frequency).reduce((a, b) => 
+              frequency[a] > frequency[b] ? a : b
+            );
+            
+            uniqueData.forEach(row => {
+              if (row[column.name] === null || row[column.name] === undefined || row[column.name] === '') {
+                row[column.name] = mode;
+              }
+            });
           }
-        });
-      }
-    });
+        }
+      });
 
-    setCleanedData(uniqueData);
-    generateAutomaticCharts(uniqueData, columns);
-    setIsProcessing(false);
-    setActiveTab('visualize');
-    toast({
-      title: "Data cleaned successfully",
-      description: `Cleaned dataset has ${uniqueData.length} rows`
-    });
-  }, [rawData, columns, toast]);
+      setCleanedData(uniqueData);
+      generateAutomaticCharts(uniqueData, columns);
+      setActiveTab('visualize');
+      toast({
+        title: "Data cleaned successfully",
+        description: `Cleaned dataset has ${uniqueData.length} rows`
+      });
+    } catch (error) {
+      toast({
+        title: "Error cleaning data",
+        description: "An error occurred while cleaning the data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [rawData, columns, toast, generateAutomaticCharts]);
 
-  // Chart generation
-  const generateAutomaticCharts = useCallback((data: DataRow[], cols: Column[]) => {
-    const newCharts: Chart[] = [];
-
-    cols.forEach(column => {
-      if (column.type === 'numeric') {
-        // Generate histogram for numeric columns
-        const values = data.map(row => parseFloat(row[column.name])).filter(v => !isNaN(v));
-        const min = Math.min(...values);
-        const max = Math.max(...values);
-        const bins = 10;
-        const binSize = (max - min) / bins;
-        
-        const histogramData = Array.from({ length: bins }, (_, i) => {
-          const binStart = min + i * binSize;
-          const binEnd = binStart + binSize;
-          const count = values.filter(v => v >= binStart && v < binEnd).length;
-          return {
-            range: `${binStart.toFixed(1)}-${binEnd.toFixed(1)}`,
-            count,
-            value: binStart + binSize / 2
-          };
-        });
-
-        newCharts.push({
-          id: `hist-${column.name}`,
-          type: 'bar',
-          title: `Distribution of ${column.name}`,
-          xAxis: 'range',
-          yAxis: 'count',
-          data: histogramData
-        });
-      } else if (column.type === 'categorical' && column.uniqueCount <= 20) {
-        // Generate bar chart for categorical columns
-        const valueCounts = data.reduce((acc, row) => {
-          const value = row[column.name];
-          acc[value] = (acc[value] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-
-        const barData = Object.entries(valueCounts)
-          .map(([key, value]) => ({ category: key, count: value }))
-          .sort((a, b) => b.count - a.count);
-
-        newCharts.push({
-          id: `bar-${column.name}`,
-          type: 'bar',
-          title: `Frequency of ${column.name}`,
-          xAxis: 'category',
-          yAxis: 'count',
-          data: barData
-        });
-      }
-    });
-
-    setCharts(newCharts);
-  }, []);
 
   const createCustomChart = useCallback(() => {
     if (!selectedXAxis || !selectedYAxis || !selectedChartType) {
@@ -296,14 +340,14 @@ const DataAnalysisDashboard: React.FC = () => {
     setChatMessages(prev => [...prev, userMsg]);
 
     try {
-      // Prepare data summary for AI
-      const dataSummary = columns.map(col => 
+      // Prepare data summary for AI with error handling
+      const dataSummary = columns.length > 0 ? columns.map(col => 
         `${col.name} (${col.type}): ${col.uniqueCount} unique values, ${col.missingCount} missing`
-      ).join('\n');
+      ).join('\n') : 'No data columns available';
       
-      const sampleData = cleanedData.slice(0, 5).map(row => 
+      const sampleData = cleanedData.length > 0 ? cleanedData.slice(0, 5).map(row => 
         Object.entries(row).map(([key, value]) => `${key}: ${value}`).join(', ')
-      ).join('\n');
+      ).join('\n') : 'No sample data available';
 
       const prompt = `You are a data analyst. Based on the following data summary and user question, provide a concise, data-backed answer.
 
@@ -316,6 +360,10 @@ ${sampleData}
 User Question: ${userQuestion}
 
 Please provide a clear, analytical response based on the data structure provided.`;
+
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
       const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=' + geminiApiKey, {
         method: 'POST',
@@ -333,15 +381,19 @@ Please provide a clear, analytical response based on the data structure provided
             topP: 0.9,
             maxOutputTokens: 1000
           }
-        })
+        }),
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        throw new Error('Failed to get AI response');
+        const errorText = await response.text();
+        throw new Error(`API request failed: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      const aiResponse = data.candidates[0]?.content?.parts[0]?.text || 'Sorry, I could not analyze your data.';
+      const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not analyze your data.';
 
       const aiMsg: ChatMessage = {
         type: 'ai',
@@ -351,11 +403,22 @@ Please provide a clear, analytical response based on the data structure provided
       setChatMessages(prev => [...prev, aiMsg]);
 
     } catch (error) {
+      console.error('AI request error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
       toast({
         title: "AI Analysis Failed",
-        description: "Could not get AI response. Please check your API key.",
+        description: errorMessage.includes('abort') ? 'Request timed out' : 'Could not get AI response. Please check your API key.',
         variant: "destructive"
       });
+      
+      // Add error message to chat
+      const errorMsg: ChatMessage = {
+        type: 'ai',
+        content: 'Sorry, I encountered an error while analyzing your data. Please try again.',
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsLoadingAI(false);
       setUserQuestion('');
