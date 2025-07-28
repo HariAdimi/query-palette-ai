@@ -8,53 +8,56 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Data-focused color palette */
-    --background: 248 250 252;
-    --foreground: 203 23% 30%;
+    /* Professional color palette */
+    --background: 249 250 251;
+    --foreground: 15 23% 25%;
 
     --card: 0 0% 100%;
-    --card-foreground: 203 23% 30%;
+    --card-foreground: 15 23% 25%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 203 23% 30%;
+    --popover-foreground: 15 23% 25%;
 
-    /* Analytics-inspired primary colors */
-    --primary: 217 91% 60%;
+    /* Professional blue primary */
+    --primary: 220 100% 54%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 217 91% 70%;
+    --primary-glow: 220 100% 64%;
 
-    --secondary: 220 13% 91%;
-    --secondary-foreground: 203 23% 30%;
+    --secondary: 214 32% 91%;
+    --secondary-foreground: 15 23% 25%;
 
-    --muted: 220 13% 91%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 214 32% 91%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 142 86% 28%;
+    --accent: 142 76% 36%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 217 91% 60%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 220 100% 54%;
 
-    /* Data visualization colors */
-    --chart-1: 217 91% 60%;
-    --chart-2: 142 86% 28%;
-    --chart-3: 47 96% 89%;
-    --chart-4: 280 100% 80%;
-    --chart-5: 12 88% 95%;
+    /* Professional data visualization colors */
+    --chart-1: 220 100% 54%;
+    --chart-2: 142 76% 36%;
+    --chart-3: 38 92% 50%;
+    --chart-4: 280 100% 70%;
+    --chart-5: 14 100% 57%;
 
-    /* Custom gradients for data dashboards */
+    /* Professional gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 13% 97%));
-    --gradient-accent: linear-gradient(135deg, hsl(var(--accent)), hsl(142 86% 35%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(214 32% 96%));
+    --gradient-accent: linear-gradient(135deg, hsl(var(--accent)), hsl(142 76% 46%));
 
-    /* Shadows for depth */
-    --shadow-card: 0 1px 3px 0 hsl(220 13% 91% / 0.4), 0 1px 2px -1px hsl(220 13% 91% / 0.4);
-    --shadow-chart: 0 4px 6px -1px hsl(220 13% 91% / 0.3), 0 2px 4px -2px hsl(220 13% 91% / 0.3);
-    --shadow-elevated: 0 10px 15px -3px hsl(220 13% 91% / 0.4), 0 4px 6px -4px hsl(220 13% 91% / 0.4);
+    /* Enhanced shadows for depth */
+    --shadow-card: 0 1px 3px 0 hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+    --shadow-chart: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
+    --shadow-elevated: 0 10px 15px -3px hsl(0 0% 0% / 0.1), 0 4px 6px -4px hsl(0 0% 0% / 0.1);
+    --shadow-subtle: 0 1px 2px 0 hsl(0 0% 0% / 0.05);
+    --shadow-medium: 0 4px 6px -1px hsl(0 0% 0% / 0.1), 0 2px 4px -2px hsl(0 0% 0% / 0.1);
+    --shadow-large: 0 20px 25px -5px hsl(0 0% 0% / 0.1), 0 10px 10px -5px hsl(0 0% 0% / 0.04);
 
     --radius: 0.5rem;
 

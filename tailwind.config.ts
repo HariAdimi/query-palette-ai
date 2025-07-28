@@ -79,7 +79,10 @@ export default {
 			boxShadow: {
 				'card': 'var(--shadow-card)',
 				'chart': 'var(--shadow-chart)',
-				'elevated': 'var(--shadow-elevated)'
+				'elevated': 'var(--shadow-elevated)',
+				'subtle': 'var(--shadow-subtle)',
+				'medium': 'var(--shadow-medium)',
+				'large': 'var(--shadow-large)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
